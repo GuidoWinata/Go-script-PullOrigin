@@ -11,21 +11,45 @@ import (
 
 func main() {
 	
-	repoPath := "D:/Sinau-Kang/Learn-Elysia/absensi"
+	repoKeuangan := "D:/smartlogy/smartkeuangan"
+	repoDashboard := "D:/smartlogy/smartdashboard"
 
-	if err := changeDirectory(repoPath); err != nil {
-		log.Fatalf("Gagal mengubah direktori: %v", err)
+	fmt.Println("Memperbarui Smartkeuangan dan Smartdashboard...")
+
+	fmt.Println("Menghapus semua unstagged files...")
+	err := runCommand("git", "clean", "-fd")
+	if err != nil {
+		log.Fatalf("Error menghapus unstagged files: %v", err)
+	}
+
+	if err := updateRepo(repoKeuangan, "master"); err != nil {
+		log.Fatalf("Gagal memperbarui SmartKeuangan: %v", err)
 	}
 
 	
-	if err := gitPull(); err != nil {
-		log.Fatalf("Gagal melakukan git pull: Tidak ada koneksi internet")
+	if err := updateRepo(repoDashboard, "main"); err != nil {
+		log.Fatalf("Gagal memperbarui SmartDashboard: %v", err)
 	}
 
-	fmt.Println("SmartKeuangan berhasil diperbarui.")
+	fmt.Println("SmartKeuangan dan SmartDashboard berhasil diperbarui.")
 
 	fmt.Println("Tekan 'Enter' untuk keluar...")
 	fmt.Scanln()
+}
+
+
+func updateRepo(repoPath, branch string) error {
+	
+	if err := changeDirectory(repoPath); err != nil {
+		return fmt.Errorf("gagal mengubah direktori ke %s: %v", repoPath, err)
+	}
+
+	
+	if err := gitPull(branch); err != nil {
+		return fmt.Errorf("gagal melakukan git pull di %s: %v", repoPath, err)
+	}
+
+	return nil
 }
 
 
@@ -34,19 +58,27 @@ func changeDirectory(repoPath string) error {
 	if err != nil {
 		return fmt.Errorf("gagal mendapatkan path absolut: %v", err)
 	}
-	
 	return os.Chdir(absPath)
 }
 
-
-func gitPull() error {
-	var stderr bytes.Buffer
-	cmd := exec.Command("git", "pull", "origin", "master")
+func runCommand(command string, args ...string) error {
+	cmd := exec.Command(command, args...)
 	cmd.Stdout = log.Writer()
-	cmd.Stderr = &stderr
- 
+	cmd.Stderr = log.Writer()
+
+	return cmd.Run()
+}
+
+
+func gitPull(branch string) error {
+	var stderr bytes.Buffer
+	cmd := exec.Command("git", "pull", "origin", branch)
+	cmd.Stdout = log.Writer() 
+	cmd.Stderr = &stderr      
+
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf(stderr.String())
+		return fmt.Errorf("git pull gagal: %v, %s", err, stderr.String())
 	}
+
 	return nil
 }
